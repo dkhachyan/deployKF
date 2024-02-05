@@ -49,7 +49,16 @@ deployKF:
 kyverno:
   fullnameOverride: kyverno
 
+  ## Kyverno CRDs
+  crds:
+    install: true
+    annotations:
+      ## kyverno will fail to sync if not using one of `Replace` or `ServerSideApply`
+      ## https://kyverno.io/docs/installation/platform-notes/#notes-for-argocd-users
+      argocd.argoproj.io/sync-options: "Replace=true"
+
   {{<- if .Values.kubernetes.azure.admissionsEnforcerFix >}}
+  {{<- "\n" >}}
   ## Kyverno configurations
   config:
     ## azure aks admissions enforcer fix
@@ -112,6 +121,7 @@ kyverno:
         {{<- end >}}
         pullPolicy: {{< .Values.deploykf_dependencies.kyverno.images.kyvernoInit.pullPolicy | quote >}}
     container:
+      resources: {{< .Values.deploykf_dependencies.kyverno.admissionController.resources | toJSON >}}
       image:
         registry: ""
         repository: {{< .Values.deploykf_dependencies.kyverno.images.kyverno.repository | quote >}}
@@ -127,6 +137,7 @@ kyverno:
   backgroundController:
     enabled: true
     replicas: {{< .Values.deploykf_dependencies.kyverno.backgroundController.replicas | conv.ToInt >}}
+    resources: {{< .Values.deploykf_dependencies.kyverno.backgroundController.resources | toJSON >}}
     image:
       registry: ""
       repository: {{< .Values.deploykf_dependencies.kyverno.images.kyvernoBackgroundController.repository | quote >}}
@@ -147,6 +158,7 @@ kyverno:
   cleanupController:
     enabled: true
     replicas: {{< .Values.deploykf_dependencies.kyverno.cleanupController.replicas | conv.ToInt >}}
+    resources: {{< .Values.deploykf_dependencies.kyverno.cleanupController.resources | toJSON >}}
     image:
       registry: ""
       repository: {{< .Values.deploykf_dependencies.kyverno.images.kyvernoCleanupController.repository | quote >}}
@@ -160,12 +172,14 @@ kyverno:
           {{<- range $extra_resource := $extra_resources >}}
           - apiGroups: {{< $extra_resource.apiGroups | toJSON >}}
             resources: {{< $extra_resource.resources | toJSON >}}
+            verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
           {{<- end >}}
 
   ## Reports controller configuration
   reportsController:
     enabled: true
     replicas: {{< .Values.deploykf_dependencies.kyverno.reportsController.replicas | conv.ToInt >}}
+    resources: {{< .Values.deploykf_dependencies.kyverno.reportsController.resources | toJSON >}}
     image:
       registry: ""
       repository: {{< .Values.deploykf_dependencies.kyverno.images.kyvernoReportsController.repository | quote >}}
